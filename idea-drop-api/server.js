@@ -12,7 +12,13 @@ const PORT = process.env.PORT || 8888;
 // Connect to MongoDB
 connectDB();
 
-app.use(cors());
+//CORS config
+const corsOptions = {
+  origin: 'http://localhost:3000',
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

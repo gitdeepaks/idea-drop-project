@@ -7,24 +7,38 @@ export const protect = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401);
-      throw new Error('Not authorized, token failed');
+      return res.status(401).json({ message: 'Not authorized, no token' });
     }
 
     const token = authHeader.split(' ')[1];
-    const { payload } = jwtVerify(token, JWT_SECRET);
-    const user = await User.findById(payload.userId).select('_id name email');
 
-    if (!user) {
-      res.status(401);
-      throw new Error('User not found');
+    try {
+      const { payload } = await jwtVerify(token, JWT_SECRET);
+
+      if (!payload || !payload.userId) {
+        return res
+          .status(401)
+          .json({ message: 'Not authorized, invalid token payload' });
+      }
+
+      const user = await User.findById(payload.userId).select('_id name email');
+
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+
+      req.user = user;
+      next();
+    } catch (jwtError) {
+      console.log('JWT verification error:', jwtError.message);
+      return res
+        .status(401)
+        .json({ message: 'Not authorized, token expired or invalid' });
     }
-
-    req.user = user;
-    next();
   } catch (error) {
-    console.log(error);
-    res.status(401);
-    next(new Error('Not authorized, token failed'));
+    console.log('Auth middleware error:', error);
+    return res
+      .status(401)
+      .json({ message: 'Not authorized, authentication failed' });
   }
 };
